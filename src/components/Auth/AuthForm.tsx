@@ -1,23 +1,30 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogIn, UserPlus, Dumbbell } from 'lucide-react';
+import { LogIn, UserPlus, Dumbbell, KeyRound } from 'lucide-react';
 
 export const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isResetMode, setIsResetMode] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (isResetMode) {
+        const { error } = await resetPassword(email);
+        if (error) throw error;
+        setSuccess('Password reset link sent! Check your email.');
+      } else if (isSignUp) {
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
       } else {
@@ -45,7 +52,7 @@ export const AuthForm = () => {
             FitHub Elite
           </h2>
           <p className="text-center text-gray-600 mb-8">
-            {isSignUp ? 'Create your account' : 'Welcome back'}
+            {isResetMode ? 'Reset your password' : isSignUp ? 'Create your account' : 'Welcome back'}
           </p>
 
           {error && (
@@ -54,8 +61,14 @@ export const AuthForm = () => {
             </div>
           )}
 
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
+              {success}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
+            {isSignUp && !isResetMode && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Full Name
@@ -85,19 +98,21 @@ export const AuthForm = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+            {!isResetMode && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            )}
 
             <button
               type="submit"
@@ -106,6 +121,11 @@ export const AuthForm = () => {
             >
               {loading ? (
                 'Processing...'
+              ) : isResetMode ? (
+                <>
+                  <KeyRound className="w-5 h-5" />
+                  Send Reset Link
+                </>
               ) : isSignUp ? (
                 <>
                   <UserPlus className="w-5 h-5" />
@@ -120,17 +140,32 @@ export const AuthForm = () => {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
+            {!isResetMode && (
+              <button
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError('');
+                  setSuccess('');
+                }}
+                className="text-blue-600 hover:text-blue-700 font-medium transition block w-full"
+              >
+                {isSignUp
+                  ? 'Already have an account? Sign in'
+                  : "Don't have an account? Sign up"}
+              </button>
+            )}
+
             <button
               onClick={() => {
-                setIsSignUp(!isSignUp);
+                setIsResetMode(!isResetMode);
+                setIsSignUp(false);
                 setError('');
+                setSuccess('');
               }}
-              className="text-blue-600 hover:text-blue-700 font-medium transition"
+              className="text-slate-600 hover:text-slate-700 font-medium transition text-sm"
             >
-              {isSignUp
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Sign up"}
+              {isResetMode ? 'Back to sign in' : 'Forgot password?'}
             </button>
           </div>
         </div>
