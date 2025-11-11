@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Chart } from "react-google-charts";
 import { getData } from './analytics_service';
 
+// https://www.react-google-charts.com/examples/
+// https://developers.google.com/chart/interactive/docs
+
+
 // Track total active members
 
 // name, address, age, gender, fitness goals, contact number, email, emergency phone number, which membership do they want, fitness goals (we can give a dropdown list) etc.
@@ -22,12 +26,13 @@ import { getData } from './analytics_service';
 
 
 // Show which class times are most busy?
-// just list them?
+// just list them? same as gym usage?
 
 // Show what times are most busy    <- histogram over time
 // [member_id, checkin_datetime, checkout_datetime]
 
 // Date gym usage? https://www.react-google-charts.com/examples/calendar
+// ONLY WORKS FOR THE PAST 1 YEAR
 
 
 export const Analytics: React.FC = () => {
@@ -44,38 +49,55 @@ export const Analytics: React.FC = () => {
 
     var newSignupsData = [
         ['Month', 'New Signups'],
-        [new Date('2024-01-01'), 50],
-        [new Date('2024-02-01'), 75],
-        [new Date('2024-03-01'), 100],
-        [new Date('2024-04-01'), 80],
-        [new Date('2024-05-01'), 120],
-        [new Date('2025-06-01'), 90],
-        [new Date('2025-07-01'), 110]
+        [new Date('2024-01-02'), 50],
+        [new Date('2024-02-02'), 75],
+        [new Date('2024-03-02'), 100],
+        [new Date('2024-04-02'), 80],
+        [new Date('2024-05-02'), 120],
+        [new Date('2025-06-02'), 90],
+        [new Date('2025-07-02'), 110]
     ]
     
     var cancellationsData = [
         ['Month', 'New Signups'],
-        [new Date('2024-01-01'), 5],
-        [new Date('2024-02-01'), 7],
-        [new Date('2024-03-01'), 10],
-        [new Date('2024-04-01'), 8],
-        [new Date('2024-05-01'), 12],
-        [new Date('2025-06-01'), 9],
-        [new Date('2025-07-01'), 11]
+        [new Date('2024-01-02'), 5],
+        [new Date('2024-02-02'), 7],
+        [new Date('2024-03-02'), 10],
+        [new Date('2024-04-02'), 8],
+        [new Date('2024-05-02'), 12],
+        [new Date('2025-06-02'), 9],
+        [new Date('2025-07-02'), 11]
     ]
 
     var activeMembersData = [
         ['Month', 'New Signups'],
-        [new Date('2024-01-01'), 500],
-        [new Date('2024-02-01'), 750],
-        [new Date('2024-03-01'), 1000],
-        [new Date('2024-04-01'), 800],
-        [new Date('2024-05-01'), 1200],
-        [new Date('2025-06-01'), 900],
-        [new Date('2025-07-01'), 1100]
+        [new Date('2024-01-02'), 500],
+        [new Date('2024-02-02'), 750],
+        [new Date('2024-03-02'), 1000],
+        [new Date('2024-04-02'), 800],
+        [new Date('2024-05-02'), 1200],
+        [new Date('2025-06-02'), 900],
+        [new Date('2025-07-02'), 1100]
     ]
 
+    var popularClassesData = [
+        ['Class Name', 'Attendance Count'],
+        ['MMA', 50],
+        ['High Intensity', 45],
+        ['Bodybuilding', 30],
+    ]
 
+    // ONLY WORKS FOR THE PAST 1 YEAR
+    var dailyGymUsageData = [
+        ['Day', 'Number of Gym Visits'],
+        // REMEMBER THAT DATES ARE ZERO INDEXED SO JANUARY 2 IS JANUARY 1
+        [new Date('2024-01-08'), 50],
+        [new Date('2024-01-02'), 75],
+        [new Date('2024-01-03'), 60],
+        [new Date('2024-01-04'), 80],
+        [new Date('2024-01-05'), 30],
+        [new Date('2024-01-06'), 90],
+    ]
 
     var lineData = [
         ['Time of Day', 'Number of Members in Gym'],
@@ -115,6 +137,14 @@ export const Analytics: React.FC = () => {
         legend: "none",
     };
 
+    var popularClassesOptions = {
+        title: 'Most Popular Classes by Attendance',
+    };
+
+    var dailyGymUsageOptions = {
+        title: 'Daily Gym Usage',
+    };
+
     return (
         <div>
             <Chart 
@@ -127,6 +157,18 @@ export const Analytics: React.FC = () => {
                 chartType="LineChart"
                 data={lineData}
                 options={lineOptions}
+            />
+            <br></br><br></br><br></br>
+            <Chart
+                chartType="BarChart"
+                data={popularClassesData}
+                options={popularClassesOptions}
+            />
+            <br></br><br></br><br></br>
+            <Chart
+                chartType="Calendar"
+                data={dailyGymUsageData}
+                options={dailyGymUsageOptions}
             />
             <br></br><br></br><br></br>
             <Chart
