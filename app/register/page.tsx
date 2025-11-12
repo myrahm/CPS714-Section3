@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getSupabaseClient, assertSupabaseConfigured } from "@/lib/supabaseClient";
+import { ensureProfileAndMembership } from "@/lib/onboarding";
 
 const fitnessGoals = [
   "Weight Loss",
@@ -66,6 +69,16 @@ export default function RegisterPage() {
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [password, setPassword] = useState("");
   const [tier, setTier] = useState(planParam || "");
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [address, setAddress] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
+  const [emergencyContact, setEmergencyContact] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   function toggleGoal(goal: string) {
     setSelectedGoals((prev) =>
@@ -131,16 +144,121 @@ export default function RegisterPage() {
             Create your personalized luxury membership account
           </p>
 
-          <form className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setError(null);
+              setSuccess(null);
+              if (password !== confirmPassword) {
+                setError("Passwords do not match.");
+                return;
+              }
+              if (!tier) {
+                setError("Please select a membership tier.");
+                return;
+              }
+              setLoading(true);
+              try {
+                assertSupabaseConfigured();
+                const supabase = getSupabaseClient();
+                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                  email,
+                  password,
+                  options: {
+                    data: {
+                      full_name: fullName,
+                      address,
+                      contact_number: contactNumber,
+                      emergency_contact: emergencyContact,
+                      goals: selectedGoals,
+                      membership_tier: tier,
+                    },
+                  },
+                });
+                if (signUpError) {
+                  setError(signUpError.message);
+                  setLoading(false);
+                  return;
+                }
+                const user = signUpData.user;
+                if (!user) {
+                  setError("Sign up succeeded, but no user returned.");
+                  setLoading(false);
+                  return;
+                }
+                const formData = {
+                  fullName,
+                  address,
+                  contactNumber,
+                  emergencyContact,
+                  goals: selectedGoals,
+                  tier,
+                };
+
+                let session = signUpData.session;
+                if (!session) {
+                  // Try immediate sign-in (works when email confirmations are disabled)
+                  const {
+                    data: signInData,
+                    error: signInError,
+                  } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                  });
+
+                  if (signInError || !signInData.session) {
+                    setSuccess(
+                      "Account created! Please verify your email, then log in to finish onboarding."
+                    );
+                    return;
+                  }
+                  session = signInData.session;
+                }
+
+                if (!session) {
+                  setSuccess(
+                    "Account created! Please verify your email, then log in to finish onboarding."
+                  );
+                  return;
+                }
+
+                await ensureProfileAndMembership({
+                  supabase,
+                  user: session.user,
+                  formData,
+                });
+
+                setSuccess("Account created! Redirecting to your dashboard…");
+                router.push("/dashboard");
+              } catch (err: any) {
+                setError(err?.message ?? "Registration failed");
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
             {/* Basic info */}
             <input
               placeholder="Full Name"
               required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               className="w-full rounded-lg bg-[#0F1424] border border-white/10 px-4 py-3 outline-none focus:border-[#D4AF37]/70"
             />
             <input
               placeholder="Address (Line 1, City, Province)"
               required
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="w-full rounded-lg bg-[#0F1424] border border-white/10 px-4 py-3 outline-none focus:border-[#D4AF37]/70"
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-lg bg-[#0F1424] border border-white/10 px-4 py-3 outline-none focus:border-[#D4AF37]/70"
             />
             <input
@@ -148,6 +266,8 @@ export default function RegisterPage() {
               required
               pattern="[0-9]{10}"
               title="10-digit phone number"
+              value={contactNumber}
+              onChange={(e) => setContactNumber(e.target.value)}
               className="w-full rounded-lg bg-[#0F1424] border border-white/10 px-4 py-3 outline-none focus:border-[#D4AF37]/70"
             />
             <input
@@ -155,6 +275,8 @@ export default function RegisterPage() {
               required
               pattern="[0-9]{10}"
               title="10-digit phone number"
+              value={emergencyContact}
+              onChange={(e) => setEmergencyContact(e.target.value)}
               className="w-full rounded-lg bg-[#0F1424] border border-white/10 px-4 py-3 outline-none focus:border-[#D4AF37]/70"
             />
 
@@ -186,6 +308,8 @@ export default function RegisterPage() {
                 type="password"
                 placeholder="Confirm Password"
                 required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full rounded-lg bg-[#0F1424] border border-white/10 px-4 py-3 outline-none focus:border-[#D4AF37]/70"
               />
             </div>
@@ -240,12 +364,16 @@ export default function RegisterPage() {
               </div>
             </div>
 
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            {success && <p className="text-sm text-emerald-400">{success}</p>}
+
             {/* submit */}
             <button
               type="submit"
-              className="w-full mt-6 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-300 text-black font-semibold px-4 py-3 shadow-xl hover:shadow-yellow-500/40 transition-all"
+              disabled={loading}
+              className="w-full mt-6 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-300 text-black font-semibold px-4 py-3 shadow-xl hover:shadow-yellow-500/40 transition-all disabled:opacity-60"
             >
-              Proceed to Payment
+              {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>
         </div>

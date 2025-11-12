@@ -3,9 +3,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { getSupabaseClient, assertSupabaseConfigured } from "@/lib/supabaseClient";
+import { ensureProfileAndMembership } from "@/lib/onboarding";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   return (
     <main className="relative min-h-screen text-white overflow-hidden">
@@ -70,13 +78,47 @@ export default function LoginPage() {
           </p>
 
           {/* form */}
-          <form className="space-y-5">
+          <form
+            className="space-y-5"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setError(null);
+              setLoading(true);
+              try {
+                assertSupabaseConfigured();
+                const supabase = getSupabaseClient();
+                const { data, error: signInError } = await supabase.auth.signInWithPassword({
+                  email,
+                  password,
+                });
+                if (signInError) {
+                  setError(signInError.message);
+                  return;
+                }
+                const user = data.user;
+                if (!user) {
+                  setError("Login succeeded, but user info was not returned.");
+                  return;
+                }
+
+                await ensureProfileAndMembership({ supabase, user });
+                router.push("/dashboard");
+                return;
+              } catch (err: any) {
+                setError(err?.message ?? "Failed to login");
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
             <div>
               <label className="block text-sm text-gray-300 mb-1">Email</label>
               <input
                 type="email"
                 placeholder="you@example.com"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-lg bg-[#0F1424] border border-white/10 px-4 py-3 outline-none focus:border-[#D4AF37]/70"
               />
             </div>
@@ -88,6 +130,8 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-lg bg-[#0F1424] border border-white/10 px-4 py-3 pr-12 outline-none focus:border-[#D4AF37]/70"
                 />
                 <button
@@ -100,11 +144,16 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {error && (
+              <p className="text-sm text-red-400">{error}</p>
+            )}
+
             <button
               type="submit"
-              className="w-full mt-4 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-300 text-black font-semibold px-4 py-3 shadow-xl hover:shadow-yellow-400/40 transition-all"
+              disabled={loading}
+              className="w-full mt-4 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-300 text-black font-semibold px-4 py-3 shadow-xl hover:shadow-yellow-400/40 transition-all disabled:opacity-60"
             >
-              Login
+              {loading ? "Signing in..." : "Login"}
             </button>
           </form>
 
