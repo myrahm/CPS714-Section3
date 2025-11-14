@@ -27,7 +27,11 @@ async def health():
     }
 
 @app.get("/classes/schedules")
-async def get_classes_schedules():
+async def get_classes_schedules(
+    date: Optional[str] = None,
+    time_from: Optional[str] = None,
+    time_to: Optional[str] = None,
+):
     {}
 
 
