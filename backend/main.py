@@ -48,7 +48,7 @@ async def get_classes_schedules(
 ):
     # supabase query to get classes schedules (need to fix for final table)
     db_query = supabase.table('class_schedules')\
-        .select('*, classes(*)')\
+        .select('*, ficlasses(*)')\
         .gte('scheduled_date', datetime.now().date().isoformat())
 
     #if filters are provided in the query, add them to the query
@@ -66,5 +66,9 @@ async def get_classes_schedules(
 
     return final_result.data #get JSON data from the query returned
 
+
+@app.post("/classes/book")
+async def book_class():
+    return{}
 
 app.include_router(data_router.data_router)
