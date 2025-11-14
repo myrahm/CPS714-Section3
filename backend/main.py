@@ -42,9 +42,25 @@ async def get_classes_schedules(
     time_from: Optional[str] = None,
     time_to: Optional[str] = None,
 ):
-    #supabase query to get classes schedules
-    query = supabase.table('class_scedules')\
-        
+    # supabase query to get classes schedules (need to fix for final table)
+    db_query = supabase.table('class_schedules')\
+        .select('*, classes(*)')\
+        .gte('scheduled_date', datetime.now().date().isoformat())
+
+    #if filters are provided in the query, add them to the query
+    if date:
+        db_query = db_query.eq('scheduled_date', date)
+    if time_from:
+        db_query = db_query.gte('start_time', time_from)
+    if time_to:
+        db_query = db_query.lte('end_time', time_to)
+
+    #Sort the results of the query by start_time
+    db_query = db_query.order('scheduled_date').order('start_time')
+
+    final_result = db_query.execute() #execute the query and get the results
+
+    return final_result.data #get JSON data from the query returned
 
 
 app.include_router(data_router.data_router)
