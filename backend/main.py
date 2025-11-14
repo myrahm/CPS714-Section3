@@ -26,4 +26,9 @@ async def health():
         "version": "1.0.0"
     }
 
+@app.get("/classes/schedules")
+async def get_classes_schedules():
+    {}
+
+
 app.include_router(data_router.data_router)
