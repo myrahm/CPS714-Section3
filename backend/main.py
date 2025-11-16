@@ -88,6 +88,7 @@ async def cancel_class(request: CancelRequest):
         booking_query = supabase.table('class_bookings')\
             .select('*, class_schedules(taken_spots, total_spots)')\
             .eq('id', request.booking_id)\
+            .eq('user_id', request.user_id)\
             .execute()
 
         if not booking_query.data: #if the booking is not found, return an error
