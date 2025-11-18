@@ -138,7 +138,33 @@ async def cancel_class(request: CancelRequest):
 
 
 @app.get("/classes/my-bookings") 
-async def get_my_bookings():
-    return{"message": "not yet implemented"}
+async def get_my_bookings(user_id: str):
+    try:
+        #supabase query to get bookings for the user with class and schedule details
+        #fetching from class_bookings table where user_id matches the provided user_id
+        db_query = supabase.table('class_bookings')\
+            .select('*, class_schedules(*, class(*))')\
+            .eq('user_id', user_id)\
+            .order('booked_at', desc=True)
+        
+        final_result = db_query.execute()
+
+        if not final_result.data: #if no bookings found for the user, return an empty list
+            return {
+                "success": True,
+                "message": "No bookings found for this user",
+                "bookings": []
+            }
+        return { #return the bookings found for the user
+            "success": True,
+            "message": "Bookings retrieved successfully",
+            "bookings": final_result.data
+        }
+    except Exception as e:
+        return { #return an error response if an exception occurs
+            "success": False,
+            "message": f"Error retrieving bookings: {str(e)}",
+            "bookings": []
+        }
 
 app.include_router(data_router.data_router)
