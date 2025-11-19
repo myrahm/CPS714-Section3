@@ -21,7 +21,7 @@ app = FastAPI()
 
 class BookingRequest(BaseModel): #Pydantic model for the booking request
     user_id: str
-    schedule_id: str
+    schedule_id: int
 
 class CancelRequest(BaseModel): #Pydantic model for the cancel request
     user_id: str
@@ -102,6 +102,41 @@ async def book_class(request: BookingRequest):
                 "message": "Class is full, No more spots available"
             }
         
+        # Fetch user's membership status from the member table
+        # This is needed to validate if they can book premium/vip classes (team 1)
+        member_query = supabase.table('member')\
+            .select('member_status')\
+            .eq('member_id', request.user_id)\
+            .execute()
+        
+        if not member_query.data: #if the member is not found, return an error
+            return {
+                "success": False,
+                "message": "Member not found. Please ensure you have a valid membership."
+            }
+        
+        member_status = member_query.data[0]['member_status']  # Get the member's tier (basic, premium, vip)
+        class_premium_status = schedule['class']['premium_status']  # Get the class's tier requirement
+        
+        # SValidate membership tier against class premium status
+        # Membership hierarchy: basic < premium < vip
+        # Rules:
+        # - basic members can only book basic classes
+        # - premium members can book basic and premium classes
+        # - vip members can book all classes (basic, premium, vip)
+        
+        tier_hierarchy = {'basic': 1, 'premium': 2, 'vip': 3}
+        
+        user_tier_level = tier_hierarchy.get(member_status, 0)
+        class_tier_level = tier_hierarchy.get(class_premium_status, 0)
+        
+        if user_tier_level < class_tier_level:
+            # User's membership tier is too low for this class
+            return {
+                "success": False,
+                "message": f"This class requires {class_premium_status} membership. Your current membership is {member_status}. Please upgrade your membership to book this class."
+            }
+        
         #check if the user has already book the class schedule previously
         #Query the class_bookings table to check if the user has already booked the class schedule
         #Look at not null constraint on the schedule_id and user_id columns
@@ -140,6 +175,10 @@ async def book_class(request: BookingRequest):
             .eq('id', request.schedule_id)\
             .execute()
         
+        # Mock notification - In production, this would integrate with team 6's notification system
+        # to send actual email/push notifications to the user
+        notification_message = f"Booking confirmed for {schedule['class']['class_name']} on {schedule['scheduled_date']} at {schedule['time_from']}. Notification sent to user."
+        
         #return success booking response with details
         return {
             "success": True,
@@ -147,7 +186,8 @@ async def book_class(request: BookingRequest):
             "booking": booking_result.data[0],
             "class_name": schedule['class']['class_name'],  # Include class name for UI
             "scheduled_date": schedule['scheduled_date'],
-            "time_from": schedule['time_from']
+            "time_from": schedule['time_from'],
+            "notification": notification_message  # Mock notification confirmation
         }
         
     except Exception as e: 
