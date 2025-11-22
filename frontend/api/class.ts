@@ -1,4 +1,3 @@
-// src/api/schedules.ts
 export type ClassInfo = {
   class_id: number;
   class_name: string;
@@ -11,8 +10,8 @@ export type ClassInfo = {
 
 export type ClassSchedule = {
   class: ClassInfo,
-  class_id: number, // schedule_id 
-  duration:number;
+  id: number,
+  duration: string;
   scheduled_date: Date;
   taken_spots: number;
   time_from: string;

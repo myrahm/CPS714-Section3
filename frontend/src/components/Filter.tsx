@@ -110,7 +110,7 @@ export default function ClassFilter({ onFilterChange }: FilterProps) {
           <button
             type="button"
             onClick={handleClear}
-            className="text-sm px-3 py-2 rounded-md hover:bg-gray-100"
+            className="bg-transparent text-xs px-3 py-2 rounded-md hover:bg-gray-100"
             aria-label="Clear filters"
           >
             Clear
@@ -118,7 +118,7 @@ export default function ClassFilter({ onFilterChange }: FilterProps) {
           <button
             type="button"
             onClick={handleSearch}
-            className="bg-black text-white px-4 py-2 rounded-full text-sm shadow"
+            className="search-btn text-white px-4 py-2 rounded text-sm shadow"
             aria-label="Search"
           >
             Search
